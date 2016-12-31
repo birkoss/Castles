@@ -8,12 +8,16 @@ function Map(rows, cols) {
 /*
  * Create a 2D array for our map
  * */
-Map.prototype.create = function() {
+Map.prototype.create = function(default_value) {
+    if (default_value == null) {
+        default_value = 0;
+    }
+
     var grid = [];
     for (var y=0; y<this.cols; y++) {
         var rows = [];
         for (var x=0; x<this.rows; x++) {
-            rows.push(0);
+            rows.push(default_value);
         }
         grid.push(rows);
     }
@@ -101,24 +105,29 @@ Map.prototype.generate = function() {
     tree = this.fill(tree, 45);
     tree = this.simulate(tree);
 
-    this.grid = {'floor':floor, 'trees':tree};
+    var castles_grid = this.create(-1);
+
     this.castles = [];
     var nbr_castles = game.rnd.integerInRange(10, 20);
     for (var i=0; i<nbr_castles; i++) {
         var castle = {};
         castle.reinforcement = game.rnd.integerInRange(0, 3) + 9;
         castle.army = (castle.reinforcement * 6) + 20;
+        castle.player = (i < 2);
 
         do {
             var x = game.rnd.integerInRange(0, 19);
             var y = game.rnd.integerInRange(0, 19);
-        } while (floor[y][x] != 1 || tree[y][x] != 0);
+        } while (floor[y][x] != 1 || tree[y][x] == 0 || castles_grid[y][x] >= 0);
 
         castle.x = x;
         castle.y = y;
+        castles_grid[y][x] = this.castles.length;
 
         this.castles.push(castle);
     }
+
+    this.grid = {'floor':floor, 'trees':tree, 'castles':castles_grid};
 };
 
 /*
@@ -144,11 +153,9 @@ Map.prototype.draw = function(container) {
                 tile.tree.anchor.setTo(0.5, 0.5);
             }
 
-            for (var c=0; c<this.castles.length; c++) {
-                if (this.castles[c].x == x && this.castles[c].y == y) {
-                    tile.castle = container.create((x*16)+8, (y*16)+8, 'castle');
-                    tile.castle.anchor.setTo(0.5, 0.5);
-                }
+            if (this.grid.castles[y][x] >= 0 ) {
+                tile.castle = container.create((x*16)+8, (y*16)+8, this.castles[this.grid.castles[y][x]].player ? 'castle' : 'house');
+                tile.castle.anchor.setTo(0.5, 0.5);
             }
 
             rows.push(tile);

@@ -7,6 +7,7 @@ var Game = {
        game.load.image('water', './assets/images/water.png'); 
        game.load.image('castle', './assets/images/castle.png'); 
        game.load.image('tree', './assets/images/tree.png'); 
+       game.load.image('house', './assets/images/house.png'); 
     },
     create: function() {
         var map = new Map(20, 20);
