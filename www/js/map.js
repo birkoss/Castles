@@ -9,54 +9,54 @@ function Map(rows, cols) {
  * Create a 2D array for our map
  * */
 Map.prototype.create = function() {
-    var map = [];
+    var grid = [];
     for (var y=0; y<this.cols; y++) {
         var rows = [];
         for (var x=0; x<this.rows; x++) {
             rows.push(0);
         }
-        map.push(rows);
+        grid.push(rows);
     }
-    return map;
+    return grid;
 };
 
 /*
  * Fill the map with some starting cell as active
  * */
-Map.prototype.fill = function(map, chanceToStartAlive) {
+Map.prototype.fill = function(grid, chanceToStartAlive) {
     for (var y=0; y<this.cols; y++) {
         for (var x=0; x<this.rows; x++) {
             if (game.rnd.integerInRange(0, 100) < chanceToStartAlive) {
-                map[y][x] = 1;
+                grid[y][x] = 1;
             }
         }
     }
 
-    return map;
+    return grid;
 }
 
 /*
  * Apply the Conway's law to the map
  * */
-Map.prototype.simulate = function(map) {
+Map.prototype.simulate = function(grid) {
     var deathLimit = 3;
     var birthLimit = 4;
 
-    var new_map = this.create();
+    var new_grid = this.create();
 
     for (var y=0; y<this.cols; y++) {
         for (var x=0; x<this.rows; x++) {
-            var count = this.countNeighbours(map, x, y);
+            var count = this.countNeighbours(grid, x, y);
 
-            if (map[y][x] == 1) {
-                new_map[y][x] = (count < deathLimit ? 0 : 1);
+            if (grid[y][x] == 1) {
+                new_grid[y][x] = (count < deathLimit ? 0 : 1);
             } else {
-                new_map[y][x] = (count > birthLimit ? 1 : 0);
+                new_grid[y][x] = (count > birthLimit ? 1 : 0);
             }
         }
     }
 
-    return new_map;
+    return new_grid;
 };
 
 /*
@@ -85,22 +85,40 @@ Map.prototype.countNeighbours = function(map, x1, y1) {
  * Generate the map with trees and castles
  * */
 Map.prototype.generate = function() {
-    var tiles = this.create();
-    tiles = this.fill(tiles, 45);
+    var floor = this.create();
+    floor = this.fill(floor, 45);
 
     var maxSimulations = 10;
     while (maxSimulations-- > 0) {
-        var new_tiles = this.simulate(tiles);
-        if (new_tiles == tiles) {
+        var new_floor = this.simulate(floor);
+        if (new_floor == floor) {
             break;
         }
-        tiles = new_tiles;
+        floor = new_floor;
     }
-    this.tiles = tiles;
 
-    tiles = this.create();
-    tiles = this.fill(tiles, 45);
-    this.trees = this.simulate(tiles);
+    var tree = this.create();
+    tree = this.fill(tree, 45);
+    tree = this.simulate(tree);
+
+    this.grid = {'floor':floor, 'trees':tree};
+    this.castles = [];
+    var nbr_castles = game.rnd.integerInRange(10, 20);
+    for (var i=0; i<nbr_castles; i++) {
+        var castle = {};
+        castle.reinforcement = game.rnd.integerInRange(0, 3) + 9;
+        castle.army = (castle.reinforcement * 6) + 20;
+
+        do {
+            var x = game.rnd.integerInRange(0, 19);
+            var y = game.rnd.integerInRange(0, 19);
+        } while (floor[y][x] != 1 || tree[y][x] != 0);
+
+        castle.x = x;
+        castle.y = y;
+
+        this.castles.push(castle);
+    }
 };
 
 /*
@@ -108,20 +126,50 @@ Map.prototype.generate = function() {
  * */
 Map.prototype.draw = function(container) {
     for (var y=0; y<this.cols; y++) {
+        var rows = [];
         for (var x=0; x<this.rows; x++) {
-            var tile = container.create((x*16)+8, (y*16)+8, (this.tiles[y][x] == 1 ? 'grass' : 'water')); 
+            var tile = container.create((x*16)+8, (y*16)+8, (this.grid.floor[y][x] == 1 ? 'grass' : 'water')); 
 
             tile.anchor.setTo(0.5, 0.5);
             tile.inputEnabled = true;
             tile.events.onInputDown.add(this.onTileClicked, this);
 
-            if (this.tiles[y][x] == 1 && this.trees[y][x] == 0) {
-                tile = container.create((x*16)+8, (y*16)+8, 'tree');
-                tile.anchor.setTo(0.5, 0.5);
+            tile.gridX = x;
+            tile.gridY = y;
+
+            tile.walkable = (this.grid.floor[y][x] == 1);
+
+            if (tile.walkable && this.grid.trees[y][x] == 0) {
+                tile.tree = container.create((x*16)+8, (y*16)+8, 'tree');
+                tile.tree.anchor.setTo(0.5, 0.5);
             }
+
+            for (var c=0; c<this.castles.length; c++) {
+                if (this.castles[c].x == x && this.castles[c].y == y) {
+                    tile.castle = container.create((x*16)+8, (y*16)+8, 'castle');
+                    tile.castle.anchor.setTo(0.5, 0.5);
+                }
+            }
+
+            rows.push(tile);
         }
+        this.tiles.push(rows);
     }
 };
+
+/*
+ * Helper to determine if it's empty at a location
+ * */
+Map.prototype.isEmpty = function(x, y) {
+
+    if (!this.tiles[y][x].isWalkable) {
+        return false;
+    }
+    if (this.trees[y][x] == 0) {
+        return false;
+    }
+    return true;
+}
 
 /*
  * Event when a tile is clicked
