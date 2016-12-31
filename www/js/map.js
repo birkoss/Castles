@@ -81,6 +81,43 @@ Map.prototype.countNeighbours = function(map, x1, y1) {
     return count;
 };
 
+/*
+ * Generate the map with trees and castles
+ * */
 Map.prototype.generate = function() {
-    console.log("OUI");
+    var tiles = this.create();
+    tiles = this.fill(tiles, 45);
+
+    var maxSimulations = 10;
+    while (maxSimulations-- > 0) {
+        var new_tiles = this.simulate(tiles);
+        if (new_tiles == tiles) {
+            break;
+        }
+        tiles = new_tiles;
+    }
+    this.tiles = tiles;
+
+    tiles = this.createMap();
+    tiles = this.fill(tiles, 10);
+    this.trees = this.simulate(tiles);
+};
+
+/*
+ * Draw the map in a container
+ * */
+Map.prototype.draw = function(container) {
+    for (var y=0; y<this.cols; y++) {
+        for (var x=0; x<this.rows; x++) {
+            var tile = container.create((x*16)+8, (y*16)+8, (this.tiles[y][x] == 1 ? 'grass' : 'water')); 
+
+            tile.anchor.setTo(0.5, 0.5);
+            tile.inputEnabled = true;
+
+            if (this.tiles[y][x] == 1 && this.trees[y][x] == 0) {
+                tile = container.create((x*16)+8, (y*16)+8, 'tree');
+                tile.anchor.setTo(0.5, 0.5);
+            }
+        }
+    }
 };
