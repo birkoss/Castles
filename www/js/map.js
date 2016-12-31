@@ -70,7 +70,7 @@ Map.prototype.countNeighbours = function(map, x1, y1) {
             var nx = x1 + x2;
             var ny = y1 + y2;
 
-            if (x != 0 || y != 0) {
+            if (x2 != 0 || y2 != 0) {
                 if (nx < 0 || ny < 0 || nx >= this.rows || ny >= this.cols || map[ny][nx] == 1) {
                     count++;
                 }
@@ -98,8 +98,8 @@ Map.prototype.generate = function() {
     }
     this.tiles = tiles;
 
-    tiles = this.createMap();
-    tiles = this.fill(tiles, 10);
+    tiles = this.create();
+    tiles = this.fill(tiles, 45);
     this.trees = this.simulate(tiles);
 };
 
@@ -113,6 +113,7 @@ Map.prototype.draw = function(container) {
 
             tile.anchor.setTo(0.5, 0.5);
             tile.inputEnabled = true;
+            tile.events.onInputDown.add(this.onTileClicked, this);
 
             if (this.tiles[y][x] == 1 && this.trees[y][x] == 0) {
                 tile = container.create((x*16)+8, (y*16)+8, 'tree');
@@ -121,3 +122,12 @@ Map.prototype.draw = function(container) {
         }
     }
 };
+
+/*
+ * Event when a tile is clicked
+ * */
+Map.prototype.onTileClicked = function(tile, pointer) {
+    var event = new CustomEvent("TileClicked");
+    event.initCustomEvent("TileClicked", true, true, {'tile':tile});
+    window.dispatchEvent(event);
+}
